@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<title>three.js webgl - materials - video</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+		<style>
+			body {
+				background-color: #000;
+				overflow: hidden;
+			}
+
+		</style>
+	</head>
+	<body>
+		<script src="js/three.min.js"></script>
+
+		<script src="js/shaders/ConvolutionShader.js"></script>
+		<script src="js/shaders/CopyShader.js"></script>
+
+		<script src="js/postprocessing/EffectComposer.js"></script>
+		<script src="js/postprocessing/RenderPass.js"></script>
+		<script src="js/postprocessing/MaskPass.js"></script>
+		<script src="js/postprocessing/ShaderPass.js"></script>
+
+		<script src="js/Detector.js"></script>
+
+		<video id="video" autoplay loop style="display:none">
+			<source src="textures/sintel.mp4" type='video/mp4; codecs="avc1.42E01E, mp4a.40.2"'>
+			<source src="textures/sintel.ogv" type='video/ogg; codecs="theora, vorbis"'>
+		</video>
+
+		<script>
+			if(!Detector.webgl) Detector.addGetWebGLMessage();
+
+			var container;
+
+			var camera, scene, renderer;
+
+			var video, texture, material, mesh;
+
+			var composer;
+
+			var mouseX = 0;
+			var mouseY = 0;
+
+			var windowHalfX = window.innerWidth / 2;
+			var windowHalfY = window.innerHeight / 2;
+
+			init();
+			animate();
+
+			function init() {
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				camera = new THREE.PerspectiveCamera( 40, window.innerWidth / window.innerHeight, 1, 10000 );
+				camera.position.z = 500;
+
+				scene = new THREE.Scene();
+
+				renderer = new THREE.WebGLRenderer({ antialias: true });
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				container.appendChild(renderer.domElement);
+
+				video = document.getElementById('video');
+
+				texture = new THREE.VideoTexture(video);
+				texture.minFilter = THREE.LinearFilter;
+				texture.magFilter = THREE.LinearFilter;
+				texture.format = THREE.RGBFormat;
+
+				// Добавляем блок с видео
+
+				var geometry;
+				var parameters = {color: 0xffffff, map: texture};
+
+				geometry = new THREE.BoxGeometry(480, 204, 0.01);
+				material = new THREE.MeshBasicMaterial(parameters);
+				
+				material.hue = 0;
+				material.saturation = 0;
+				
+				mesh = new THREE.Mesh(geometry, material);
+				mesh.position.x = 0;
+				mesh.position.y = 0;
+				mesh.position.z = 0;
+				
+				mesh.scale.x = mesh.scale.y = mesh.scale.z = 0.6;
+				scene.add( mesh );
+				
+				
+
+				document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+
+				// postprocessing
+
+				var renderModel = new THREE.RenderPass( scene, camera );
+				var effectCopy = new THREE.ShaderPass( THREE.CopyShader );
+
+				effectCopy.renderToScreen = true;
+
+				composer = new THREE.EffectComposer( renderer );
+
+				composer.addPass( renderModel );
+				composer.addPass( effectCopy );
+
+				//
+
+				window.addEventListener( 'resize', onWindowResize, false );
+
+			}
+
+			function onWindowResize() {
+				windowHalfX = window.innerWidth / 2;
+				windowHalfY = window.innerHeight / 2;
+
+				camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				composer.reset();
+			}
+
+			function onDocumentMouseMove(event) {
+				mouseX = ( event.clientX - windowHalfX );
+				mouseY = ( event.clientY - windowHalfY ) * 0.1;
+			}
+
+			//
+
+			function animate() {
+				requestAnimationFrame( animate );
+				render();
+			}
+
+			function render() {
+				camera.position.x += ( mouseX - camera.position.x ) * 0.05;
+				camera.position.y += ( - mouseY - camera.position.y ) * 0.05;
+
+				camera.lookAt( scene.position );
+
+				renderer.clear();
+				composer.render();
+			}
+		</script>
+	</body>
+</html>
